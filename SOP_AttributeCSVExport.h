@@ -25,4 +25,11 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
     protected:
 
         bool getClassType(fpreal t, GA_AttributeOwner& attrib_owner) const;
+
+    protected:
+
+        bool exportCSVPoints(UT_IFStream& stream) const;
+        bool exportCSVVertices(UT_IFStream& stream) const;
+        bool exportCSVPrimitives(UT_IFStream& stream) const;
+        bool exportCSVDetail(UT_IFStream& stream) const;
 };

@@ -103,6 +103,30 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         return error();
     }
 
+    switch(attrib_owner)
+    {
+        default:
+        case GA_ATTRIB_POINT:
+        {
+            break;
+        }
+
+        case GA_ATTRIB_VERTEX:
+        {
+            break;
+        }
+
+        case GA_ATTRIB_PRIMITIVE:
+        {
+            break;
+        }
+
+        case GA_ATTRIB_DETAIL:
+        {
+            break;
+        }
+    }
+
     unlockInputs();
     return error();
 }
@@ -153,4 +177,40 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
     }
 
     return false;
+}
+
+
+bool
+SOP_AttributeCSVExport::exportCSVPoints(UT_IFStream& stream) const
+{
+    return true;
+}
+
+
+bool
+SOP_AttributeCSVExport::exportCSVVertices(UT_IFStream& stream) const
+{
+    return true;
+}
+
+
+bool
+SOP_AttributeCSVExport::exportCSVPrimitives(UT_IFStream& stream) const
+{
+    return true;
+}
+
+
+bool
+SOP_AttributeCSVExport::exportCSVDetail(UT_IFStream& stream) const
+{
+    return true;
+}
+
+
+void
+newSopOperator(OP_OperatorTable* table)
+{
+    table->addOperator(new OP_Operator("attributecsvexport", "Attribute CSV Export", SOP_AttributeCSVExport::myConstructor,
+        SOP_AttributeCSVExport::myTemplateList, 1, 1, 0));
 }
