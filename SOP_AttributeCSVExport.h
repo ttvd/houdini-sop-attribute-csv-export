@@ -28,6 +28,10 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
 
     protected:
 
+        bool getAttributeNames(UT_Array<UT_String>& attr_names) const;
+
+    protected:
+
         bool exportCSVPoints(UT_IFStream& stream) const;
         bool exportCSVVertices(UT_IFStream& stream) const;
         bool exportCSVPrimitives(UT_IFStream& stream) const;

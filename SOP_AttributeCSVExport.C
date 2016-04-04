@@ -181,8 +181,37 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
+SOP_AttributeCSVExport::getAttributeNames(UT_Array<UT_String>& attr_names) const
+{
+    attr_names.clear();
+
+    const GA_Attribute* attr = nullptr;
+    GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+    {
+        UT_String attr_name(attr->getName());
+        attr_names.append(attr_name);
+    }
+
+    return true;
+}
+
+
+bool
 SOP_AttributeCSVExport::exportCSVPoints(UT_IFStream& stream) const
 {
+    GA_Offset point_offset = 0;
+    const GA_Attribute* attr = nullptr;
+
+    GA_FOR_ALL_PTOFF(gdp, point_offset)
+    {
+        GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+        {
+            GA_StorageClass storage_class = attr->getStorageClass();
+            int tuple_size = attr->getTupleSize();
+            UT_String attr_name(attr->getName());
+        }
+    }
+
     return true;
 }
 
