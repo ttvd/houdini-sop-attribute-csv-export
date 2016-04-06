@@ -1,4 +1,4 @@
-# houdini-sop-attribute-csv-export
+# houdini-sop-attribute-csv-export 
 
 [Houdini](http://www.sidefx.com/index.php) SOP node which lets you export attribute values from geometry (points, vertices, primitives or detail) into a CSV file.
 
