@@ -5,8 +5,8 @@
 ![houdini-sop-attribute-csv-export](http://i.imgur.com/0rweGm1.png)
 
 ## Binaries, Houdini 15
-* Mac OS X - Todo.
-* Windows - Todo.
+* Mac OS X - Todo. 
+* Windows - Todo. 
 
 ## Building
 
