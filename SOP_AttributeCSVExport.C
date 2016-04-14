@@ -168,6 +168,8 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 
     writeCSVAttributeNames(csv_attr_names, stream);
 
+    const GA_AttributeDict& attr_dict = gdp->getAttributeDict(attrib_owner);
+
     switch(attrib_owner)
     {
         default:
@@ -176,9 +178,18 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             GA_Offset point_offset = 0;
             GA_FOR_ALL_PTOFF(gdp, point_offset)
             {
-                GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+                UT_Array<UT_DeepString> values;
+                for(GA_AttributeDict::iterator it = attr_dict.begin(); !it.atEnd() && (attr = it.attrib()); ++it)
                 {
-                    if(writeAttributeValue(attr, point_offset, attrib_owner, stream, skip_intrinsics))
+                    processAttributeValue(attr, point_offset, attrib_owner, skip_intrinsics, values);
+                }
+
+                for(int idx = 0; idx < values.size(); ++idx)
+                {
+                    const UT_DeepString& value = values(idx);
+                    stream << value;
+
+                    if(idx + 1 != values.size())
                     {
                         stream << ", ";
                     }
@@ -333,8 +344,9 @@ SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& at
 }
 
 
-bool
-SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner, UT_OFStream& stream, bool skip_intrinsics) const
+void
+SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner, bool skip_intrinsics,
+    UT_Array<UT_DeepString>& values) const
 {
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
@@ -342,7 +354,7 @@ SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, GA_Offset 
 
     if(!isSupportedAttribute(attr, skip_intrinsics))
     {
-        return false;
+        return;
     }
 
     switch(attr_storage_class)
@@ -361,16 +373,13 @@ SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, GA_Offset 
             {
                 if(attrib.isValid())
                 {
-                    stream << handle.get(offset, idx);
+                    UT_DeepString value;
+                    value.sprintf("%f", handle.get(offset, idx));
+                    values.append(value);
                 }
                 else
                 {
-                    stream << 0.0f;
-                }
-
-                if(idx + 1 != tuple_size)
-                {
-                    stream << ", ";
+                    values.append(UT_DeepString("0.0"));
                 }
             }
 
@@ -384,12 +393,9 @@ SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, GA_Offset 
 
         default:
         {
-            return false;
+            break;
         }
-
     }
-
-    return true;
 }
 
 
