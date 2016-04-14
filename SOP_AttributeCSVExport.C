@@ -103,11 +103,82 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         return error();
     }
 
+    UT_OFStream stream(csv_filename, UT_OFStream::out, UT_IOS_ASCII);
+    if(!stream)
+    {
+        UT_WorkBuffer buf;
+        buf.sprintf("Error openening CSV file for writing.");
+        addError(SOP_MESSAGE, buf.buffer());
+
+        unlockInputs();
+        return error();
+    }
+
+    UT_Array<UT_String> csv_attr_names;
+    const GA_Attribute* attr = nullptr;
+
     switch(attrib_owner)
     {
         default:
         case GA_ATTRIB_POINT:
         {
+            GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+            {
+                getAttributeCSVNames(attr, csv_attr_names);
+            }
+
+            break;
+        }
+
+        case GA_ATTRIB_VERTEX:
+        {
+            GA_FOR_ALL_VERTEX_ATTRIBUTES(gdp, attr)
+            {
+                getAttributeCSVNames(attr, csv_attr_names);
+            }
+
+            break;
+        }
+
+        case GA_ATTRIB_PRIMITIVE:
+        {
+            GA_FOR_ALL_PRIMITIVE_ATTRIBUTES(gdp, attr)
+            {
+                getAttributeCSVNames(attr, csv_attr_names);
+            }
+
+            break;
+        }
+
+        case GA_ATTRIB_DETAIL:
+        {
+            GA_FOR_ALL_DETAIL_ATTRIBUTES(gdp, attr)
+            {
+                getAttributeCSVNames(attr, csv_attr_names);
+            }
+
+            break;
+        }
+    }
+
+    writeCSVAttributeNames(csv_attr_names, stream);
+
+    switch(attrib_owner)
+    {
+        default:
+        case GA_ATTRIB_POINT:
+        {
+            GA_Offset point_offset = 0;
+            GA_FOR_ALL_PTOFF(gdp, point_offset)
+            {
+                GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+                {
+                    GA_StorageClass storage_class = attr->getStorageClass();
+                    int tuple_size = attr->getTupleSize();
+                    UT_String attr_name(attr->getName());
+                }
+            }
+
             break;
         }
 
@@ -127,6 +198,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         }
     }
 
+    stream.close();
     unlockInputs();
     return error();
 }
@@ -135,7 +207,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 const char*
 SOP_AttributeCSVExport::inputLabel(unsigned int idx) const
 {
-    return "Attribute CSV Export";
+    return "Input geometry.";
 }
 
 
@@ -181,34 +253,22 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
-SOP_AttributeCSVExport::getAttributeNames(UT_Array<UT_String>& attr_names) const
+SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_String>& attr_csv_names) const
 {
-    attr_names.clear();
+    int tuple_size = attr->getTupleSize();
+    UT_String attr_name(attr->getName());
 
-    const GA_Attribute* attr = nullptr;
-    GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+    if(1 == tuple_size)
     {
-        UT_String attr_name(attr->getName());
-        attr_names.append(attr_name);
+        attr_csv_names.append(attr_name);
     }
-
-    return true;
-}
-
-
-bool
-SOP_AttributeCSVExport::exportCSVPoints(UT_IFStream& stream) const
-{
-    GA_Offset point_offset = 0;
-    const GA_Attribute* attr = nullptr;
-
-    GA_FOR_ALL_PTOFF(gdp, point_offset)
+    else
     {
-        GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
+        for(int idx = 0; idx < tuple_size; ++idx)
         {
-            GA_StorageClass storage_class = attr->getStorageClass();
-            int tuple_size = attr->getTupleSize();
-            UT_String attr_name(attr->getName());
+            UT_String attr_csv_name;
+            attr_csv_name.sprintf("%s[%d]", attr_name.buffer(), idx);
+            attr_csv_names.append(attr_csv_name);
         }
     }
 
@@ -216,24 +276,21 @@ SOP_AttributeCSVExport::exportCSVPoints(UT_IFStream& stream) const
 }
 
 
-bool
-SOP_AttributeCSVExport::exportCSVVertices(UT_IFStream& stream) const
+void
+SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_String>& attr_csv_names, UT_OFStream& stream) const
 {
-    return true;
-}
+    for(int idx = 0; idx < attr_csv_names.size(); ++idx)
+    {
+        const UT_String attr_name = attr_csv_names(idx);
+        stream << attr_name;
 
+        if(idx + 1 != attr_csv_names.size())
+        {
+            stream << " ;";
+        }
+    }
 
-bool
-SOP_AttributeCSVExport::exportCSVPrimitives(UT_IFStream& stream) const
-{
-    return true;
-}
-
-
-bool
-SOP_AttributeCSVExport::exportCSVDetail(UT_IFStream& stream) const
-{
-    return true;
+    stream << "\n";
 }
 
 
@@ -243,3 +300,4 @@ newSopOperator(OP_OperatorTable* table)
     table->addOperator(new OP_Operator("attributecsvexport", "Attribute CSV Export", SOP_AttributeCSVExport::myConstructor,
         SOP_AttributeCSVExport::myTemplateList, 1, 1, 0));
 }
+

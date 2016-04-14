@@ -2,6 +2,7 @@
 
 #include <SOP/SOP_API.h>
 #include <SOP/SOP_Node.h>
+#include <UT/UT_OFStream.h>
 
 class SOP_API SOP_AttributeCSVExport : public SOP_Node
 {
@@ -25,15 +26,9 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
     protected:
 
         bool getClassType(fpreal t, GA_AttributeOwner& attrib_owner) const;
+        bool getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_String>& attr_csv_names) const;
 
     protected:
 
-        bool getAttributeNames(UT_Array<UT_String>& attr_names) const;
-
-    protected:
-
-        bool exportCSVPoints(UT_IFStream& stream) const;
-        bool exportCSVVertices(UT_IFStream& stream) const;
-        bool exportCSVPrimitives(UT_IFStream& stream) const;
-        bool exportCSVDetail(UT_IFStream& stream) const;
+        void writeCSVAttributeNames(const UT_Array<UT_String>& attr_csv_names, UT_OFStream& stream) const;
 };
