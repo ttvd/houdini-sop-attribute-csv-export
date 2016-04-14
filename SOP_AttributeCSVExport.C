@@ -272,7 +272,8 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
-SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names, bool skip_intrinsics) const
+SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names,
+    bool skip_intrinsics) const
 {
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
@@ -345,8 +346,8 @@ SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& at
 
 
 void
-SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner, bool skip_intrinsics,
-    UT_Array<UT_DeepString>& values) const
+SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner,
+    bool skip_intrinsics, UT_Array<UT_DeepString>& values) const
 {
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
