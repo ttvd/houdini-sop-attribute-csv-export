@@ -26,9 +26,10 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
     protected:
 
         bool getClassType(fpreal t, GA_AttributeOwner& attrib_owner) const;
-        bool getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names) const;
+        bool getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names, bool skip_intrinsics) const;
 
     protected:
 
         void writeCSVAttributeNames(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const;
+        void writeAttributeValue(const GA_Attribute* attr, UT_OFStream& stream, bool skip_intrinsics) const;
 };

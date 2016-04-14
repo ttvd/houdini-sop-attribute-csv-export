@@ -12,9 +12,11 @@
 
 #define SOP_ATTRIBUTECSVEXPORT_CLASS "class"
 #define SOP_ATTRIBUTECSVEXPORT_FILE "file"
+#define SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES "csv_skip_intrinsic"
 
 static PRM_Name s_name_file(SOP_ATTRIBUTECSVEXPORT_FILE, "CSV File");
 static PRM_Name s_name_class(SOP_ATTRIBUTECSVEXPORT_CLASS, "Class");
+static PRM_Name s_name_skip_intrinsic_attributes(SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES, "Skip Intrinsic Attributes");
 
 static PRM_Name s_name_class_types[] =
 {
@@ -26,6 +28,7 @@ static PRM_Name s_name_class_types[] =
 };
 
 static PRM_ChoiceList s_choicelist_class_type(PRM_CHOICELIST_SINGLE, s_name_class_types);
+static PRM_Default s_default_skip_intrinsic_attributes(true);
 
 static PRM_SpareData s_spare_file_picker(PRM_SpareArgs() << PRM_SpareToken(PRM_SpareData::getFileChooserModeToken(),
     PRM_SpareData::getFileChooserModeValRead()) << PRM_SpareToken(PRM_SpareData::getFileChooserPatternToken(),
@@ -35,6 +38,7 @@ PRM_Template
 SOP_AttributeCSVExport::myTemplateList[] = {
     PRM_Template(PRM_FILE, 1, &s_name_file, 0, 0, 0, 0, &s_spare_file_picker),
     PRM_Template(PRM_ORD, 1, &s_name_class, 0, &s_choicelist_class_type),
+    PRM_Template(PRM_TOGGLE, 1, &s_name_skip_intrinsic_attributes, &s_default_skip_intrinsic_attributes),
     PRM_Template()
 };
 
@@ -71,6 +75,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 {
     fpreal t = context.getTime();
     GA_AttributeOwner attrib_owner = GA_ATTRIB_POINT;
+    bool skip_intrinsics = evalInt(SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES, 0, t);
     UT_String csv_filename;
 
     UT_Interrupt* boss = UTgetInterrupt();
@@ -124,7 +129,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         {
             GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
             {
-                getAttributeCSVNames(attr, csv_attr_names);
+                getAttributeCSVNames(attr, csv_attr_names, skip_intrinsics);
             }
 
             break;
@@ -134,7 +139,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         {
             GA_FOR_ALL_VERTEX_ATTRIBUTES(gdp, attr)
             {
-                getAttributeCSVNames(attr, csv_attr_names);
+                getAttributeCSVNames(attr, csv_attr_names, skip_intrinsics);
             }
 
             break;
@@ -144,7 +149,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         {
             GA_FOR_ALL_PRIMITIVE_ATTRIBUTES(gdp, attr)
             {
-                getAttributeCSVNames(attr, csv_attr_names);
+                getAttributeCSVNames(attr, csv_attr_names, skip_intrinsics);
             }
 
             break;
@@ -154,7 +159,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         {
             GA_FOR_ALL_DETAIL_ATTRIBUTES(gdp, attr)
             {
-                getAttributeCSVNames(attr, csv_attr_names);
+                getAttributeCSVNames(attr, csv_attr_names, skip_intrinsics);
             }
 
             break;
@@ -173,10 +178,10 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             {
                 GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
                 {
-                    GA_StorageClass storage_class = attr->getStorageClass();
-                    int tuple_size = attr->getTupleSize();
-                    UT_String attr_name(attr->getName());
+                    writeAttributeValue(attr, stream, skip_intrinsics);
                 }
+
+                stream << "\n";
             }
 
             break;
@@ -253,10 +258,20 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
-SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names) const
+SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names, bool skip_intrinsics) const
 {
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
+
+    if(GA_STORECLASS_INVALID == attr->getStorageClass() || GA_TYPE_VOID == attr->getTypeInfo())
+    {
+        return false;
+    }
+
+    if(skip_intrinsics && attr_name.startsWith("."))
+    {
+        return false;
+    }
 
     if(1 == tuple_size)
     {
@@ -291,6 +306,27 @@ SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& at
     }
 
     stream << "\n";
+}
+
+
+void
+SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, UT_OFStream& stream, bool skip_intrinsics) const
+{
+    int tuple_size = attr->getTupleSize();
+    UT_DeepString attr_name(attr->getExportName());
+    GA_StorageClass attr_storage_class = attr->getStorageClass();
+
+    if(GA_STORECLASS_INVALID == attr_storage_class || GA_TYPE_VOID == attr->getTypeInfo())
+    {
+        return;
+    }
+
+    if(skip_intrinsics && attr_name.startsWith("."))
+    {
+        return;
+    }
+
+
 }
 
 
