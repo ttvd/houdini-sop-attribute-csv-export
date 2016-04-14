@@ -103,7 +103,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         return error();
     }
 
-    UT_OFStream stream(csv_filename, UT_OFStream::out, UT_IOS_ASCII);
+    UT_OFStream stream(csv_filename, UT_OFStream::trunc, UT_IOS_ASCII);
     if(!stream)
     {
         UT_WorkBuffer buf;
@@ -114,7 +114,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         return error();
     }
 
-    UT_Array<UT_String> csv_attr_names;
+    UT_Array<UT_DeepString> csv_attr_names;
     const GA_Attribute* attr = nullptr;
 
     switch(attrib_owner)
@@ -253,10 +253,10 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
-SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_String>& attr_csv_names) const
+SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names) const
 {
     int tuple_size = attr->getTupleSize();
-    UT_String attr_name(attr->getName());
+    UT_DeepString attr_name(attr->getExportName());
 
     if(1 == tuple_size)
     {
@@ -266,7 +266,7 @@ SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<
     {
         for(int idx = 0; idx < tuple_size; ++idx)
         {
-            UT_String attr_csv_name;
+            UT_DeepString attr_csv_name;
             attr_csv_name.sprintf("%s[%d]", attr_name.buffer(), idx);
             attr_csv_names.append(attr_csv_name);
         }
@@ -277,16 +277,16 @@ SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<
 
 
 void
-SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_String>& attr_csv_names, UT_OFStream& stream) const
+SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const
 {
     for(int idx = 0; idx < attr_csv_names.size(); ++idx)
     {
-        const UT_String attr_name = attr_csv_names(idx);
+        const UT_DeepString& attr_name = attr_csv_names(idx);
         stream << attr_name;
 
         if(idx + 1 != attr_csv_names.size())
         {
-            stream << " ;";
+            stream << ", ";
         }
     }
 
