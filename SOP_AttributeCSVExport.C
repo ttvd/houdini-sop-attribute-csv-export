@@ -178,7 +178,10 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             {
                 GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
                 {
-                    writeAttributeValue(attr, stream, skip_intrinsics);
+                    if(writeAttributeValue(attr, point_offset, attrib_owner, stream, skip_intrinsics))
+                    {
+                        stream << ", ";
+                    }
                 }
 
                 stream << "\n";
@@ -263,12 +266,7 @@ SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
 
-    if(GA_STORECLASS_INVALID == attr->getStorageClass() || GA_TYPE_VOID == attr->getTypeInfo())
-    {
-        return false;
-    }
-
-    if(skip_intrinsics && attr_name.startsWith("."))
+    if(!isSupportedAttribute(attr, skip_intrinsics))
     {
         return false;
     }
@@ -291,7 +289,32 @@ SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<
 }
 
 
-void
+bool
+SOP_AttributeCSVExport::isSupportedAttribute(const GA_Attribute* attr, bool skip_intrinsics) const
+{
+    UT_DeepString attr_name(attr->getExportName());
+    GA_StorageClass attr_storage_class = attr->getStorageClass();
+
+    if(GA_STORECLASS_INVALID == attr_storage_class || GA_STORECLASS_OTHER == attr_storage_class)
+    {
+        return false;
+    }
+
+    if(GA_TYPE_VOID == attr->getTypeInfo())
+    {
+        return false;
+    }
+
+    if(skip_intrinsics && attr_name.startsWith("."))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+bool
 SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const
 {
     for(int idx = 0; idx < attr_csv_names.size(); ++idx)
@@ -306,27 +329,67 @@ SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& at
     }
 
     stream << "\n";
+    return true;
 }
 
 
-void
-SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, UT_OFStream& stream, bool skip_intrinsics) const
+bool
+SOP_AttributeCSVExport::writeAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner, UT_OFStream& stream, bool skip_intrinsics) const
 {
     int tuple_size = attr->getTupleSize();
     UT_DeepString attr_name(attr->getExportName());
     GA_StorageClass attr_storage_class = attr->getStorageClass();
 
-    if(GA_STORECLASS_INVALID == attr_storage_class || GA_TYPE_VOID == attr->getTypeInfo())
+    if(!isSupportedAttribute(attr, skip_intrinsics))
     {
-        return;
+        return false;
     }
 
-    if(skip_intrinsics && attr_name.startsWith("."))
+    switch(attr_storage_class)
     {
-        return;
+        case GA_STORECLASS_INT:
+        {
+            break;
+        }
+
+        case GA_STORECLASS_REAL:
+        {
+            GA_ROAttributeRef attrib(gdp->findFloatTuple(owner, attr_name, tuple_size));
+            GA_ROHandleF handle(attr);
+
+            for(int idx = 0; idx < tuple_size; ++idx)
+            {
+                if(attrib.isValid())
+                {
+                    stream << handle.get(offset, idx);
+                }
+                else
+                {
+                    stream << 0.0f;
+                }
+
+                if(idx + 1 != tuple_size)
+                {
+                    stream << ", ";
+                }
+            }
+
+            break;
+        }
+
+        case GA_STORECLASS_STRING:
+        {
+            break;
+        }
+
+        default:
+        {
+            return false;
+        }
+
     }
 
-
+    return true;
 }
 
 
