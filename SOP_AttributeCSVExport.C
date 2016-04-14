@@ -361,6 +361,23 @@ SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offse
     {
         case GA_STORECLASS_INT:
         {
+            GA_ROAttributeRef attrib(gdp->findIntTuple(owner, attr_name, tuple_size));
+            GA_ROHandleI handle(attr);
+
+            for(int idx = 0; idx < tuple_size; ++idx)
+            {
+                if(attrib.isValid())
+                {
+                    UT_DeepString value;
+                    value.sprintf("%d", handle.get(offset, idx));
+                    values.append(value);
+                }
+                else
+                {
+                    values.append(UT_DeepString("0"));
+                }
+            }
+
             break;
         }
 
@@ -388,6 +405,24 @@ SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offse
 
         case GA_STORECLASS_STRING:
         {
+            GA_ROAttributeRef attrib(gdp->findStringTuple(owner, attr_name, tuple_size));
+            GA_ROHandleS handle(attr);
+
+            for(int idx = 0; idx < tuple_size; ++idx)
+            {
+                if(attrib.isValid())
+                {
+                    UT_DeepString result;
+                    UT_DeepString value = handle.get(offset, idx);
+                    value.sprintf("\"%s\"", value.buffer());
+                    values.append(value);
+                }
+                else
+                {
+                    values.append(UT_DeepString("\"\""));
+                }
+            }
+
             break;
         }
 
