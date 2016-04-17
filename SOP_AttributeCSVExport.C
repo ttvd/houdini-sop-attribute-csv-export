@@ -312,11 +312,6 @@ SOP_AttributeCSVExport::isSupportedAttribute(const GA_Attribute* attr, bool skip
         return false;
     }
 
-    if(GA_TYPE_VOID == attr->getTypeInfo())
-    {
-        return false;
-    }
-
     if(skip_intrinsics && attr_name.startsWith("."))
     {
         return false;
@@ -415,12 +410,12 @@ SOP_AttributeCSVExport::processAttributeValue(const GA_Attribute* attr, GA_Offse
                 {
                     UT_DeepString result;
                     UT_DeepString value = handle.get(offset, idx);
-                    value.sprintf("\"%s\"", value.buffer());
+                    value.sprintf("%s", value.buffer());
                     values.append(value);
                 }
                 else
                 {
-                    values.append(UT_DeepString("\"\""));
+                    values.append(UT_DeepString(""));
                 }
             }
 
