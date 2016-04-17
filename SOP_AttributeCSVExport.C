@@ -166,9 +166,10 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         }
     }
 
-    writeCSVAttributeNames(csv_attr_names, stream);
+    writeCSVValues(csv_attr_names, stream);
 
     const GA_AttributeDict& attr_dict = gdp->getAttributeDict(attrib_owner);
+    UT_Array<UT_DeepString> values;
 
     switch(attrib_owner)
     {
@@ -178,24 +179,13 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             GA_Offset point_offset = 0;
             GA_FOR_ALL_PTOFF(gdp, point_offset)
             {
-                UT_Array<UT_DeepString> values;
-                for(GA_AttributeDict::iterator it = attr_dict.begin(); !it.atEnd() && (attr = it.attrib()); ++it)
+                GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
                 {
                     processAttributeValue(attr, point_offset, attrib_owner, skip_intrinsics, values);
                 }
-
-                for(int idx = 0; idx < values.size(); ++idx)
-                {
-                    const UT_DeepString& value = values(idx);
-                    stream << value;
-
-                    if(idx + 1 != values.size())
-                    {
-                        stream << ", ";
-                    }
-                }
-
-                stream << "\n";
+                
+                writeCSVValues(values, stream);
+                values.clear();
             }
 
             break;
@@ -203,16 +193,56 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 
         case GA_ATTRIB_VERTEX:
         {
+            GEO_Primitive* prim = nullptr;
+            GA_Offset vertex_offset = 0;
+            GA_FOR_ALL_PRIMITIVES(gdp, prim)
+            {
+                int vertex_count = prim->getVertexCount();
+                for(int vtx_idx = 0; vtx_idx < vertex_count; ++vtx_idx)
+                {
+                    vertex_offset = prim->getVertexOffset(vtx_idx);
+                    GA_FOR_ALL_VERTEX_ATTRIBUTES(gdp, attr)
+                    {
+                        processAttributeValue(attr, vertex_offset, attrib_owner, skip_intrinsics, values);
+                    }
+
+                    writeCSVValues(values, stream);
+                    values.clear();
+                }
+            }
+
             break;
         }
 
         case GA_ATTRIB_PRIMITIVE:
         {
+            GA_Primitive* prim = nullptr;
+            GA_Offset prim_offset = 0;
+            GA_FOR_ALL_PRIMITIVES(gdp, prim)
+            {
+                prim_offset = prim->getMapOffset();
+                GA_FOR_ALL_PRIMITIVE_ATTRIBUTES(gdp, attr)
+                {
+                    processAttributeValue(attr, prim_offset, attrib_owner, skip_intrinsics, values);
+                }
+
+                writeCSVValues(values, stream);
+                values.clear();
+            }
+
             break;
         }
 
         case GA_ATTRIB_DETAIL:
         {
+            GA_FOR_ALL_DETAIL_ATTRIBUTES(gdp, attr)
+            {
+                processAttributeValue(attr, 0, attrib_owner, skip_intrinsics, values);
+            }
+
+            writeCSVValues(values, stream);
+            values.clear();
+
             break;
         }
     }
@@ -321,8 +351,8 @@ SOP_AttributeCSVExport::isSupportedAttribute(const GA_Attribute* attr, bool skip
 }
 
 
-bool
-SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const
+void
+SOP_AttributeCSVExport::writeCSVValues(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const
 {
     for(int idx = 0; idx < attr_csv_names.size(); ++idx)
     {
@@ -336,7 +366,6 @@ SOP_AttributeCSVExport::writeCSVAttributeNames(const UT_Array<UT_DeepString>& at
     }
 
     stream << "\n";
-    return true;
 }
 
 

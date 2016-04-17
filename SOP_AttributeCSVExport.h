@@ -32,7 +32,7 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
 
     protected:
 
-        bool writeCSVAttributeNames(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const;
+        void writeCSVValues(const UT_Array<UT_DeepString>& attr_csv_names, UT_OFStream& stream) const;
         void processAttributeValue(const GA_Attribute* attr, GA_Offset offset, GA_AttributeOwner owner, bool skip_intrinsics,
                 UT_Array<UT_DeepString>& values) const;
 };
