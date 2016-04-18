@@ -107,7 +107,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
     {
         UT_WorkBuffer buf;
         buf.sprintf("CSV file was not specified.");
-        addError(SOP_MESSAGE, buf.buffer());
+        addWarning(SOP_MESSAGE, buf.buffer());
 
         unlockInputs();
         return error();
