@@ -29,6 +29,9 @@ class SOP_API SOP_AttributeCSVExport : public SOP_Node
         bool getClassType(fpreal t, GA_AttributeOwner& attrib_owner) const;
         bool getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names, bool skip_intrinsics) const;
         bool isSupportedAttribute(const GA_Attribute* attr, bool skip_intrinsics) const;
+        bool createOffsetAttributeCSVNames(GA_AttributeOwner owner, UT_Array<UT_DeepString>& attr_csv_names) const;
+        void createOffsetAttributeCSVValue(GA_Offset offset, UT_Array<UT_DeepString>& attr_csv_values) const;
+        void createOffsetAttributeCSVValue(GA_Offset offset1, GA_Offset offset2, UT_Array<UT_DeepString>& attr_csv_values) const;
 
     protected:
 

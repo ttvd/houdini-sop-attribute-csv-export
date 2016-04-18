@@ -13,10 +13,12 @@
 #define SOP_ATTRIBUTECSVEXPORT_CLASS "class"
 #define SOP_ATTRIBUTECSVEXPORT_FILE "file"
 #define SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES "csv_skip_intrinsic"
+#define SOP_ATTRIBUTECSVEXPORT_CREATE_OFFSET_ATTRIBUTE "csv_create_offset_attribute"
 
 static PRM_Name s_name_file(SOP_ATTRIBUTECSVEXPORT_FILE, "CSV File");
 static PRM_Name s_name_class(SOP_ATTRIBUTECSVEXPORT_CLASS, "Class");
 static PRM_Name s_name_skip_intrinsic_attributes(SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES, "Skip Intrinsic Attributes");
+static PRM_Name s_name_create_offset_attribute(SOP_ATTRIBUTECSVEXPORT_CREATE_OFFSET_ATTRIBUTE, "Create Offset Attribute");
 
 static PRM_Name s_name_class_types[] =
 {
@@ -29,6 +31,7 @@ static PRM_Name s_name_class_types[] =
 
 static PRM_ChoiceList s_choicelist_class_type(PRM_CHOICELIST_SINGLE, s_name_class_types);
 static PRM_Default s_default_skip_intrinsic_attributes(true);
+static PRM_Default s_default_create_offset_attribute(true);
 
 static PRM_SpareData s_spare_file_picker(PRM_SpareArgs() << PRM_SpareToken(PRM_SpareData::getFileChooserModeToken(),
     PRM_SpareData::getFileChooserModeValRead()) << PRM_SpareToken(PRM_SpareData::getFileChooserPatternToken(),
@@ -39,6 +42,7 @@ SOP_AttributeCSVExport::myTemplateList[] = {
     PRM_Template(PRM_FILE, 1, &s_name_file, 0, 0, 0, 0, &s_spare_file_picker),
     PRM_Template(PRM_ORD, 1, &s_name_class, 0, &s_choicelist_class_type),
     PRM_Template(PRM_TOGGLE, 1, &s_name_skip_intrinsic_attributes, &s_default_skip_intrinsic_attributes),
+    PRM_Template(PRM_TOGGLE, 1, &s_name_create_offset_attribute, &s_default_create_offset_attribute),
     PRM_Template()
 };
 
@@ -76,6 +80,7 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
     fpreal t = context.getTime();
     GA_AttributeOwner attrib_owner = GA_ATTRIB_POINT;
     bool skip_intrinsics = evalInt(SOP_ATTRIBUTECSVEXPORT_SKIP_INTRINSIC_ATTRIBUTES, 0, t);
+    bool create_offset_attribute = evalInt(SOP_ATTRIBUTECSVEXPORT_CREATE_OFFSET_ATTRIBUTE, 0, t);
     UT_String csv_filename;
 
     UT_Interrupt* boss = UTgetInterrupt();
@@ -121,6 +126,11 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 
     UT_Array<UT_DeepString> csv_attr_names;
     const GA_Attribute* attr = nullptr;
+
+    if(create_offset_attribute)
+    {
+        createOffsetAttributeCSVNames(attrib_owner, csv_attr_names);
+    }
 
     switch(attrib_owner)
     {
@@ -179,11 +189,16 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             GA_Offset point_offset = 0;
             GA_FOR_ALL_PTOFF(gdp, point_offset)
             {
+                if(create_offset_attribute)
+                {
+                    createOffsetAttributeCSVValue(point_offset, values);
+                }
+
                 GA_FOR_ALL_POINT_ATTRIBUTES(gdp, attr)
                 {
                     processAttributeValue(attr, point_offset, attrib_owner, skip_intrinsics, values);
                 }
-                
+
                 writeCSVValues(values, stream);
                 values.clear();
             }
@@ -195,12 +210,24 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
         {
             GEO_Primitive* prim = nullptr;
             GA_Offset vertex_offset = 0;
+            GA_Offset prim_offset = 0;
+            GA_Offset point_offset = 0;
             GA_FOR_ALL_PRIMITIVES(gdp, prim)
             {
+                prim_offset = prim->getMapOffset();
+
                 int vertex_count = prim->getVertexCount();
                 for(int vtx_idx = 0; vtx_idx < vertex_count; ++vtx_idx)
                 {
                     vertex_offset = prim->getVertexOffset(vtx_idx);
+                    point_offset = prim->getPointOffset(vtx_idx);
+
+                    if(create_offset_attribute)
+                    {
+                        createOffsetAttributeCSVValue(prim_offset, vtx_idx, values);
+                        createOffsetAttributeCSVValue(point_offset, values);
+                    }
+
                     GA_FOR_ALL_VERTEX_ATTRIBUTES(gdp, attr)
                     {
                         processAttributeValue(attr, vertex_offset, attrib_owner, skip_intrinsics, values);
@@ -221,6 +248,12 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
             GA_FOR_ALL_PRIMITIVES(gdp, prim)
             {
                 prim_offset = prim->getMapOffset();
+
+                if(create_offset_attribute)
+                {
+                    createOffsetAttributeCSVValue(prim_offset, values);
+                }
+
                 GA_FOR_ALL_PRIMITIVE_ATTRIBUTES(gdp, attr)
                 {
                     processAttributeValue(attr, prim_offset, attrib_owner, skip_intrinsics, values);
@@ -235,6 +268,11 @@ SOP_AttributeCSVExport::cookMySop(OP_Context& context)
 
         case GA_ATTRIB_DETAIL:
         {
+            if(create_offset_attribute)
+            {
+                createOffsetAttributeCSVValue(0, values);
+            }
+
             GA_FOR_ALL_DETAIL_ATTRIBUTES(gdp, attr)
             {
                 processAttributeValue(attr, 0, attrib_owner, skip_intrinsics, values);
@@ -302,6 +340,36 @@ SOP_AttributeCSVExport::getClassType(fpreal t, GA_AttributeOwner& attrib_owner) 
 
 
 bool
+SOP_AttributeCSVExport::createOffsetAttributeCSVNames(GA_AttributeOwner owner, UT_Array<UT_DeepString>& attr_csv_names) const
+{
+    switch(owner)
+    {
+        case GA_ATTRIB_VERTEX:
+        {
+            attr_csv_names.append(UT_DeepString("Offset"));
+            attr_csv_names.append(UT_DeepString("Point Num"));
+            return true;
+        }
+
+        case GA_ATTRIB_PRIMITIVE:
+        case GA_ATTRIB_POINT:
+        case GA_ATTRIB_DETAIL:
+        {
+            attr_csv_names.append(UT_DeepString("Offset"));
+            return true;
+        }
+
+        default:
+        {
+            break;
+        }
+    }
+
+    return false;
+}
+
+
+bool
 SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<UT_DeepString>& attr_csv_names,
     bool skip_intrinsics) const
 {
@@ -328,6 +396,25 @@ SOP_AttributeCSVExport::getAttributeCSVNames(const GA_Attribute* attr, UT_Array<
     }
 
     return true;
+}
+
+
+void
+SOP_AttributeCSVExport::createOffsetAttributeCSVValue(GA_Offset offset, UT_Array<UT_DeepString>& attr_csv_values) const
+{
+    UT_DeepString value;
+    value.sprintf("%lld", offset);
+    attr_csv_values.append(value);
+}
+
+
+void
+SOP_AttributeCSVExport::createOffsetAttributeCSVValue(GA_Offset offset1, GA_Offset offset2,
+    UT_Array<UT_DeepString>& attr_csv_values) const
+{
+    UT_DeepString value;
+    value.sprintf("%lld:%lld", offset1, offset2);
+    attr_csv_values.append(value);
 }
 
 
