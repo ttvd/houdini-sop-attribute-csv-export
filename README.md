@@ -15,6 +15,7 @@
 * Build the SOP Houdini dso (SOP_AttributeCSVExport.dylib or SOP_AttributeCSVExport.dll).
 * Place the dso in the appropriate Houdini dso folder.
   * On OS X this would be /Users/your_username/Library/Preferences/houdini/15.0/dso/
+  * On Windows this would be C:\Users\your_username\Documents\houdini15.0\dso
 
 ## Usage
 
